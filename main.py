@@ -1,3 +1,8 @@
+import yaml
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -107,3 +112,67 @@ async def verify(data: TokenRequest):
                 "valid": False
             }
         )
+
+@app.get("/effective-config")
+def effective_config(set: list[str] = None):
+
+    # Default layer
+    config = {
+        "port": 8000,
+        "workers": 1,
+        "debug": False,
+        "log_level": "info",
+        "api_key": "default-secret-000"
+    }
+
+    # YAML layer
+    with open("config.development.yaml") as f:
+        config.update(yaml.safe_load(f))
+
+    # .env layer
+    if os.getenv("APP_PORT"):
+        config["port"] = int(os.getenv("APP_PORT"))
+
+    if os.getenv("NUM_WORKERS"):
+        config["workers"] = int(os.getenv("NUM_WORKERS"))
+
+    if os.getenv("APP_DEBUG"):
+        config["debug"] = os.getenv("APP_DEBUG").lower() in [
+            "true","1","yes","on"
+        ]
+
+    # OS Environment
+    if os.getenv("APP_WORKERS"):
+        config["workers"] = int(os.getenv("APP_WORKERS"))
+
+    if os.getenv("APP_LOG_LEVEL"):
+        config["log_level"] = os.getenv("APP_LOG_LEVEL")
+
+    if os.getenv("APP_API_KEY"):
+        config["api_key"] = os.getenv("APP_API_KEY")
+
+    if os.getenv("APP_PORT"):
+        config["port"] = int(os.getenv("APP_PORT"))
+
+    # CLI overrides
+    if set:
+        for item in set:
+            if "=" not in item:
+                continue
+
+            key,value=item.split("=",1)
+
+            if key in ["port","workers"]:
+                config[key]=int(value)
+
+            elif key=="debug":
+                config[key]=value.lower() in [
+                    "true","1","yes","on"
+                ]
+
+            else:
+                config[key]=value
+
+    config["api_key"]="******"
+
+    return config
