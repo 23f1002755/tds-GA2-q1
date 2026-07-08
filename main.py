@@ -20,12 +20,11 @@ ALLOWED_ORIGIN = "https://dash-pv9a2s.example.com"
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[ALLOWED_ORIGIN],
+    allow_origins=["*"],
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 # -----------------------------
 # Q2 Configuration
 # -----------------------------
