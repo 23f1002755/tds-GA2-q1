@@ -1,3 +1,4 @@
+import json
 import yaml
 import os
 from dotenv import load_dotenv
@@ -112,8 +113,10 @@ async def verify(data: TokenRequest):
             }
         )
 
+from fastapi import Query
+
 @app.get("/effective-config")
-def effective_config(set: list[str] = None):
+def effective_config(set: str | list[str] = Query(None)):
 
     # Default layer
     config = {
@@ -153,25 +156,32 @@ def effective_config(set: list[str] = None):
     if os.getenv("APP_PORT"):
         config["port"] = int(os.getenv("APP_PORT"))
 
-    # CLI overrides
+    # CLI overrides (highest precedence)
+      
     if set:
-        for item in set:
-            if "=" not in item:
-                continue
+      try:
+        if isinstance(set, list):
+            # supports ?set=port=9000&set=debug=true
+            for item in set:
+                if "=" in item:
+                    key, value = item.split("=", 1)
 
-            key,value=item.split("=",1)
+                    if key in ["port", "workers"]:
+                        config[key] = int(value)
+                    elif key == "debug":
+                        config[key] = value.lower() in ["true", "1", "yes", "on"]
+                    else:
+                        config[key] = value
+         else:
+            # supports ?set={"port":"9000","debug":"true"}
+            overrides = json.loads(set)
 
-            if key in ["port","workers"]:
-                config[key]=int(value)
-
-            elif key=="debug":
-                config[key]=value.lower() in [
-                    "true","1","yes","on"
-                ]
-
-            else:
-                config[key]=value
-
-    config["api_key"]="******"
-
-    return config
+            for key, value in overrides.items():
+                if key in ["port", "workers"]:
+                    config[key] = int(value)
+                elif key == "debug":
+                    config[key] = str(value).lower() in ["true", "1", "yes", "on"]
+                else:
+                    config[key] = value
+      Exception:
+        pass
