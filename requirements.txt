@@ -16,3 +16,4 @@ pyjwt
 cryptography
 python-multipart
 PyYAML
+python-dotenv
